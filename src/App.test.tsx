@@ -1,0 +1,30 @@
+import { afterEach, beforeEach, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import App from './App';
+beforeEach(() => localStorage.clear());
+afterEach(cleanup);
+it('creates, updates, filters, and restores an enquiry', async () => {
+  const user = userEvent.setup();
+  const view = render(<App />);
+  await user.click(screen.getByRole('button', { name: '+ New enquiry' }));
+  await user.type(screen.getByLabelText('Company name'), 'Pune Engineering');
+  await user.type(screen.getByLabelText('Contact name'), 'Asha');
+  await user.type(screen.getByLabelText('Enquiry summary'), 'Need guidance on export support');
+  await user.click(screen.getByRole('button', { name: 'Save enquiry' }));
+  expect(screen.getByText('Pune Engineering')).toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText('Status for Pune Engineering'), 'Resolved');
+  view.unmount();
+  render(<App />);
+  expect(screen.getByLabelText('Status for Pune Engineering')).toHaveValue('Resolved');
+  await user.selectOptions(screen.getByLabelText('Filter by status'), 'Open');
+  expect(screen.getByText('No matching enquiries')).toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText('Filter by status'), 'All statuses');
+  await user.type(screen.getByLabelText('Search enquiries'), 'unrelated');
+  expect(screen.queryByText('Pune Engineering')).not.toBeInTheDocument();
+});
+it('handles invalid browser storage without crashing', () => {
+  localStorage.setItem('mccia-helpline.enquiries.v1', '{invalid');
+  render(<App />);
+  expect(screen.getByText('Good support starts here')).toBeInTheDocument();
+});
